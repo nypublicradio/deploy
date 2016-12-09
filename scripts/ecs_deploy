@@ -1,0 +1,62 @@
+#!/usr/bin/env python3
+""" NYPR ECS Deployment Tool.
+
+Usage:
+  ecs_deploy build
+  ecs_deploy test --cmd=<cmd>
+  ecs_deploy deploy --env=<env> --memory-reservation=<kb>
+                    [--memory-reservation-hard] [--cpu=<num>]
+                    [--port=<port> ...] [--timeout=<seconds>]
+
+Options:
+  -h --help                     Show this screen.
+  --version                     Show version.
+
+  # test
+  --cmd=<cmd>                   Define the test command.
+
+  # build
+  --env=<env>                   Environment (eg. dev|demo|prod|util)
+  --memory-reservation=<kb>     Memory reservation size for container in KB.
+  --memory-reservation-hard     Flag to set memory reservation to a hard
+                                reservation.
+  --cpu=<num>                   CPU credit limit for container.
+  --port=<port>                 Repeatable, ports for the container to expose.
+  --timeout=<seconds>           How long to wait for old ECS services to stop.
+                                [default: 300]
+"""
+from deploy import ECSDeploy
+from docopt import docopt
+
+
+def enforce_types(args):
+    if args['--memory-reservation']:
+        args['--memory-reservation'] = int(args['--memory-reservation'])
+    if args['--cpu']:
+        args['--cpu'] = int(args['--cpu'])
+    if args['--timeout']:
+        args['--timeout'] = int(args['--timeout'])
+    if args['--port']:
+        args['--port'] = [int(p) for p in args['--ports']]
+    return args
+
+
+if __name__ == '__main__':
+    args = docopt(__doc__)
+    args = enforce_types(args)
+    ecs_deploy = ECSDeploy(env=args['--env'], cmd=args['--cmd'])
+
+    if args['build']:
+        ecs_deploy.build_docker_img()
+
+    elif args['test']:
+        ecs_deploy.test_docker_img()
+
+    elif args['deploy']:
+        ecs_deploy.deploy(
+            memory_reservation=args['--memory-reservation'],
+            memory_reservation_hard=args['--memory-reservation-hard'],
+            cpu=args['--cpu'],
+            ports=args['--ports'],
+            timeout=args['--timeout']
+        )
