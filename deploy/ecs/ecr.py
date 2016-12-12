@@ -1,6 +1,8 @@
 import boto3
 import docker
+import json
 import os
+import sys
 import time
 
 from base64 import b64decode
@@ -42,7 +44,8 @@ def get_ecs_task_environment_vars(env):
     """
     match_prefix = '{}_'.format(env.upper())
 
-    def strip_prefix(s): s[len(match_prefix):]  # strips <ENV>_ from name
+    def strip_prefix(s):
+        s[len(match_prefix):]  # strips <ENV>_ from name
 
     env_var_defs = []
     for env_var_name, env_var_val in os.environ.items():
@@ -74,10 +77,8 @@ class ECSDeploy():
                  aws_default_region=None,
                  build_tag=None,
                  circle_project_reponame=None,
-                 env=None,
-                 test_command='python setup.py test'):
+                 env=None):
         self.docker_client = docker.Client(version='1.21')
-        self.test_command = test_command
         self.docker_img_url = get_docker_image_url(aws_account_id,
                                                    aws_default_region,
                                                    circle_project_reponame,
@@ -87,10 +88,22 @@ class ECSDeploy():
         self.ecs_cluster_name = get_ecs_cluster_name(aws_ecs_cluster, env)
 
     def build_docker_img(self):
-        self.docker_client.build('.', tag=self.docker_img_url)
+        build_progress = self.docker_client.build('.', tag=self.docker_img_url)
+        for step in build_progress:
+            print(json.loads(step.decode())['stream'])
 
-    def test_docker_img(self):
-        self.docker_client.excute(self.docker_img_url, self.test_command)
+    def test_docker_img(self, test_command):
+        container = self.docker_client.create_container(
+            image=self.docker_img_url,
+            command=test_command
+        )
+        self.docker_client.start(container['Id'])
+        status_code = self.docker_client.wait(container['Id'])
+        print(self.docker_client.logs(container=container['Id']).decode())
+        if status_code == 0:
+            sys.exit('Tests Passed')
+        else:
+            sys.exit('Tests Failed')
 
     def get_task_def(self, memory_reservation, cpu=None,
                      memory_reservation_hard=False, ports=None):
