@@ -177,7 +177,7 @@ class ECSDeploy():
 
         # On the cli we'd use "docker push repo:tag"
         # but here they need to be split.
-        repository, tag = self.docker_image_url.split(':')
+        repository, tag = self.docker_img_url.split(':')
         self.docker_client.push(
             repository=repository,
             tag=tag
@@ -241,6 +241,7 @@ class ECSDeploy():
 
     def deploy(self, env, memory_reservation, cpu=None,
                memory_reservation_hard=False, ports=None, timeout=300):
+        self.push_ecr_image()
         task_def = self.get_task_def(env,
                                      memory_reservation,
                                      cpu,
