@@ -97,15 +97,18 @@ class ECSDeploy():
                 msg = msg_dict['stream']
             elif 'status' and 'progressDetail' in msg_dict:
                 progress_detail = msg_dict['progressDetail']
-                if progress_detail:
-                    msg = msg_dict['status'] + \
-                          ' ({current}/{total}) ' \
-                          '{id} {progress}'.format(msg_dict)
-                else:
-                    msg = msg_dict['status']
+                try:
+                    if progress_detail:
+                        msg = msg_dict['status'] + \
+                              ' ({current}/{total}) ' \
+                              '{id} {progress}'.format(msg_dict)
+                    else:
+                        msg = msg_dict['status']
+                except KeyError:
+                    msg = step.decode()
             else:
                 msg = step.decode()
-            print(msg)
+                print(msg)
 
     def test_docker_img(self, test_command):
         if not test_command:
