@@ -93,7 +93,18 @@ class ECSDeploy():
         build_progress = self.docker_client.build('.', tag=self.docker_img_url)
         for step in build_progress:
             msg_dict = json.loads(step.decode())
-            msg = msg_dict.get('stream', step.decode())
+            if 'stream' in msg_dict:
+                msg = msg_dict['stream']
+            elif 'status' and 'progressDetail' in msg_dict:
+                progress_detail = msg_dict['progressDetail']
+                if progress_detail:
+                    msg = msg_dict['status'] + \
+                          ' ({current}/{total}) ' \
+                          '{id} {progress}'.format(msg_dict)
+                else:
+                    msg = msg_dict['status']
+            else:
+                msg = step.decode()
             print(msg)
 
     def test_docker_img(self, test_command):
