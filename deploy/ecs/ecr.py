@@ -97,15 +97,12 @@ class ECSDeploy():
                 msg = msg_dict['stream']
             elif 'status' and 'progressDetail' in msg_dict:
                 progress_detail = msg_dict['progressDetail']
-                try:
-                    if progress_detail:
-                        msg = msg_dict['status'] + \
-                              ' ({current}/{total}) ' \
-                              '{id} {progress}'.format(msg_dict)
-                    else:
-                        msg = msg_dict['status']
-                except KeyError:
-                    msg = step.decode()
+                if progress_detail:
+                    msg = msg_dict['status'] + \
+                          ' ({current}/{total}) ' \
+                          '{id} {progress}'.format(progress_detail)
+                else:
+                    msg = msg_dict['status']
             else:
                 msg = step.decode()
                 print(msg)
