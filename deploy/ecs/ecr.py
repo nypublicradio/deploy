@@ -88,9 +88,6 @@ class ECSDeploy():
                                                    build_tag)
         self.reponame = circle_project_reponame
         self.ecs_cluster_basename = aws_ecs_cluster
-        # self.ecs_task_name = get_ecs_task_name(circle_project_reponame, env)
-        # self.ecs_task_env_vars = get_ecs_task_environment_vars(env)
-        # self.ecs_cluster_name = get_ecs_cluster_name(aws_ecs_cluster, env)
 
     def build_docker_img(self):
         build_progress = self.docker_client.build('.', tag=self.docker_img_url)
