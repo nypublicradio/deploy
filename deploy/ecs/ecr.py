@@ -92,7 +92,9 @@ class ECSDeploy():
     def build_docker_img(self):
         build_progress = self.docker_client.build('.', tag=self.docker_img_url)
         for step in build_progress:
-            print(json.loads(step.decode())['stream'])
+            msg_dict = json.loads(step.decode())
+            msg = msg_dict.get('stream', step.decode())
+            print(msg)
 
     def test_docker_img(self, test_command):
         if not test_command:
