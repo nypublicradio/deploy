@@ -209,7 +209,7 @@ class ECSDeploy():
             taskDefinition=task_def_revision
         )
 
-        if resp['service']['taskDefintion'] != task_def_revision:
+        if resp['service']['taskDefinition'] != task_def_revision:
             raise ECSServiceUpdateError('Error updating ECS service:'
                                         '\n{}'.format(resp))
 
