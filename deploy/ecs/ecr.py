@@ -68,6 +68,10 @@ class ECSServiceUpdateError(Exception):
     pass
 
 
+class ContainerTestError(Exception):
+    pass
+
+
 class ECSDeploy():
 
     @with_defaults
@@ -76,16 +80,17 @@ class ECSDeploy():
                  aws_ecs_cluster=None,
                  aws_default_region=None,
                  build_tag=None,
-                 circle_project_reponame=None,
-                 env=None):
+                 circle_project_reponame=None):
         self.docker_client = docker.Client(version='1.21')
         self.docker_img_url = get_docker_image_url(aws_account_id,
                                                    aws_default_region,
                                                    circle_project_reponame,
                                                    build_tag)
-        self.ecs_task_name = get_ecs_task_name(circle_project_reponame, env)
-        self.ecs_task_env_vars = get_ecs_task_environment_vars(env)
-        self.ecs_cluster_name = get_ecs_cluster_name(aws_ecs_cluster, env)
+        self.reponame = circle_project_reponame
+        self.ecs_cluster_basename = aws_ecs_cluster
+        # self.ecs_task_name = get_ecs_task_name(circle_project_reponame, env)
+        # self.ecs_task_env_vars = get_ecs_task_environment_vars(env)
+        # self.ecs_cluster_name = get_ecs_cluster_name(aws_ecs_cluster, env)
 
     def build_docker_img(self):
         build_progress = self.docker_client.build('.', tag=self.docker_img_url)
@@ -93,6 +98,8 @@ class ECSDeploy():
             print(json.loads(step.decode())['stream'])
 
     def test_docker_img(self, test_command):
+        if not test_command:
+            raise ContainerTestError('Test command cannot be empty.')
         container = self.docker_client.create_container(
             image=self.docker_img_url,
             command=test_command
@@ -105,17 +112,19 @@ class ECSDeploy():
         else:
             sys.exit('Tests Failed')
 
-    def get_task_def(self, memory_reservation, cpu=None,
+    def get_task_def(self, env, memory_reservation, cpu=None,
                      memory_reservation_hard=False, ports=None):
         """ Returns a JSON task template that will be uploaded to ECS
             to create a new task version. Any environment variable prefixed
             with ENV_ will be accessible to the container running the task.
         """
+        ecs_task_name = get_ecs_task_name(self.reponame, env)
+        ecs_task_env_vars = get_ecs_task_environment_vars(env)
         task_def = {
-            'name': self.ecs_task_name,
+            'name': ecs_task_name,
             'image': self.docker_img_url,
             'essential': True,
-            'environment': self.ecs_task_env_vars
+            'environment': ecs_task_env_vars
         }
 
         # Task defs require a soft or hard memory reservation to be set
@@ -160,11 +169,11 @@ class ECSDeploy():
             tag=tag
         )
 
-    def register_task_def(self, task_def):
+    def register_task_def(self, env, task_def):
         """ Utilizes the boto3 library to register a task definition
             with AWS.
         """
-        family = self.ecs_task_name
+        family = get_ecs_task_name(self.reponame, env)
         client = boto3.client('ecs')
         resp = client.register_task_definition(
             containerDefinitions=[
@@ -175,9 +184,9 @@ class ECSDeploy():
         revision = resp['taskDefinition']['taskDefinitionArn']
         return revision
 
-    def update_ecs_service(self, task_def_revision, timeout):
-        service = self.ecs_task_name
-        cluster = self.ecs_cluster_name
+    def update_ecs_service(self, env, task_def_revision, timeout):
+        service = get_ecs_task_name(self.reponame, env)
+        cluster = get_ecs_cluster_name(self.ecs_cluster_basename, env)
 
         client = boto3.client('ecs')
         resp = client.update_service(
@@ -216,11 +225,12 @@ class ECSDeploy():
             timer += timer_increment
             time.sleep(timer_increment)
 
-    def deploy(self, memory_reservation, cpu=None,
+    def deploy(self, env, memory_reservation, cpu=None,
                memory_reservation_hard=False, ports=None, timeout=300):
-        task_def = self.get_task_def(memory_reservation,
+        task_def = self.get_task_def(env,
+                                     memory_reservation,
                                      cpu,
                                      memory_reservation_hard,
                                      ports)
-        task_def_revision = self.register_task_def(task_def)
-        self.update_ecs_service(task_def_revision, timeout)
+        task_def_revision = self.register_task_def(env, task_def)
+        self.update_ecs_service(env, task_def_revision, timeout)

@@ -2,8 +2,8 @@
 """ NYPR ECS Deployment Tool.
 
 Usage:
-  ecs_deploy build --env=<env>
-  ecs_deploy test --env=<env> --test-cmd=<cmd>
+  ecs_deploy build
+  ecs_deploy test [--test-cmd=<cmd>]
   ecs_deploy deploy --env=<env> --memory-reservation=<kb>
                     [--memory-reservation-hard] [--cpu=<num>]
                     [--port=<port> ...] [--timeout=<seconds>]
@@ -13,13 +13,12 @@ Options:
   --version                     Show version.
 
   # test
-  ---test-cmd=<cmd>             Test command [default: python setup.py test]
+  --test-cmd=<cmd>             Test command [default: python setup.py test]
 
-  # build
+  # deploy
   --env=<env>                   Environment (eg. dev|demo|prod|util)
   --memory-reservation=<kb>     Memory reservation size for container in KB.
   --memory-reservation-hard     Flag to set memory reservation to a hard
-                                reservation.
   --cpu=<num>                   CPU credit limit for container.
   --port=<port>                 Repeatable, ports for the container to expose.
   --timeout=<seconds>           How long to wait for old ECS services to stop.
@@ -44,7 +43,7 @@ def enforce_types(args):
 if __name__ == '__main__':
     args = docopt(__doc__)
     args = enforce_types(args)
-    ecs_deploy = ECSDeploy(env=args['--env'])
+    ecs_deploy = ECSDeploy()
 
     if args['build']:
         ecs_deploy.build_docker_img()
@@ -54,6 +53,7 @@ if __name__ == '__main__':
 
     elif args['deploy']:
         ecs_deploy.deploy(
+            env=args['--env'],
             memory_reservation=args['--memory-reservation'],
             memory_reservation_hard=args['--memory-reservation-hard'],
             cpu=args['--cpu'],

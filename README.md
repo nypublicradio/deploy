@@ -16,7 +16,7 @@ pip install git+https://github.com/nypublicradio/deploy.git
 
 Usage:
   ecs_deploy build
-  ecs_deploy test
+  ecs_deploy test [--test-cmd=<cmd>]
   ecs_deploy deploy --env=<env> --memory-reservation=<kb>
                     [--memory-reservation-hard] [--cpu=<num>]
                     [--port=<port> ...] [--timeout=<seconds>]
@@ -24,6 +24,11 @@ Usage:
 Options:
   -h --help                     Show this screen.
   --version                     Show version.
+
+  # test
+  --test-cmd=<cmd>             Test command [default: python setup.py test]
+
+  # build
   --env=<env>                   Environment (eg. dev|demo|prod|util)
   --memory-reservation=<kb>     Memory reservation size for container in KB.
   --memory-reservation-hard     Flag to set memory reservation to a hard
@@ -44,7 +49,7 @@ machine:
 
 dependencies:
   override:
-    - pip3 install -U git@github.com:nypublicradio/deploy
+    - pip3 install git+https://github.com/nypublicradio/deploy.git
     - ecs_deploy build
 
 test:
