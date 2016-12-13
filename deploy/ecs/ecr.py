@@ -99,9 +99,12 @@ class ECSDeploy():
             elif 'status' and 'progressDetail' in msg_dict:
                 progress_detail = msg_dict['progressDetail']
                 if progress_detail:
-                    msg = msg_dict['status'] + \
-                          ' ({current}/{total}) ' \
-                          '{id} {progress}'.format(progress_detail)
+                    try:
+                        msg = msg_dict['status'] + \
+                              ' ({current}/{total}) ' \
+                              '{id} {progress}'.format(progress_detail)
+                    except KeyError:
+                        msg = step.decode()
                 else:
                     msg = msg_dict['status']
             else:
