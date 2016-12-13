@@ -53,6 +53,7 @@ def get_ecs_task_environment_vars(env):
             stripped_env_var_name = strip_prefix(env_var_name)
             env_var_def = {'name': stripped_env_var_name, 'value': env_var_val}
             env_var_defs.append(env_var_def)
+    return env_var_defs
 
 
 def get_ecs_cluster_name(aws_ecs_cluster, env):
