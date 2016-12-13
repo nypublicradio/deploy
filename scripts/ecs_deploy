@@ -36,7 +36,7 @@ def enforce_types(args):
     if args['--timeout']:
         args['--timeout'] = int(args['--timeout'])
     if args['--port']:
-        args['--port'] = [int(p) for p in args['--ports']]
+        args['--port'] = [int(p) for p in args['--port']]
     return args
 
 
@@ -57,6 +57,6 @@ if __name__ == '__main__':
             memory_reservation=args['--memory-reservation'],
             memory_reservation_hard=args['--memory-reservation-hard'],
             cpu=args['--cpu'],
-            ports=args['--ports'],
+            ports=args['--port'],
             timeout=args['--timeout']
         )
