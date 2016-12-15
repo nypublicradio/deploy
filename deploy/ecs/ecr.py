@@ -109,7 +109,7 @@ class ECSDeploy():
                     msg = msg_dict['status']
             else:
                 msg = step.decode()
-                print(msg)
+            print(msg)
 
     def test_docker_img(self, test_command):
         if not test_command:
