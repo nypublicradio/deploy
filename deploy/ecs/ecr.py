@@ -122,7 +122,8 @@ class ECSDeploy():
         status_code = self.docker_client.wait(container['Id'])
         print(self.docker_client.logs(container=container['Id']).decode())
         if status_code == 0:
-            sys.exit('Tests Passed')
+            print('Tests Passed')
+            sys.exit(0)
         else:
             sys.exit('Tests Failed')
 
