@@ -65,6 +65,25 @@ def get_ecs_cluster_name(aws_ecs_cluster, env):
     return ecs_cluster
 
 
+def pprint_docker(byte_msg):
+    str_msg = byte_msg.decode()
+    d = json.loads(str_msg)
+    if 'stream' in d:
+        msg = d['stream']
+    elif 'status' in d:
+        if d.get('progressDetail'):
+            msg = '{} ({}/{}) {} {}'.format(d['status'],
+                                            d['progressDetail']['current'],
+                                            d['progressDetail']['total'],
+                                            d['id'],
+                                            d['progress'])
+        else:
+            msg = d['status']
+    else:
+        msg = str_msg
+    print(msg)
+
+
 class ECSServiceUpdateError(Exception):
     pass
 
@@ -93,23 +112,7 @@ class ECSDeploy():
     def build_docker_img(self):
         build_progress = self.docker_client.build('.', tag=self.docker_img_url)
         for step in build_progress:
-            msg_dict = json.loads(step.decode())
-            if 'stream' in msg_dict:
-                msg = msg_dict['stream']
-            elif 'status' and 'progressDetail' in msg_dict:
-                progress_detail = msg_dict['progressDetail']
-                if progress_detail:
-                    try:
-                        msg = msg_dict['status'] +\
-                              ' ({current}/{total})'.format(progress_detail) +\
-                              ' {id} {progress}'.format(msg_dict)
-                    except KeyError:
-                        msg = step.decode()
-                else:
-                    msg = msg_dict['status']
-            else:
-                msg = step.decode()
-            print(msg)
+            pprint_docker(step)
 
     def test_docker_img(self, test_command):
         if not test_command:
