@@ -34,7 +34,7 @@ Options:
   --memory-reservation-hard     Flag to set memory reservation to a hard
                                 reservation.
   --cpu=<num>                   CPU credit limit for container.
-  --port=<port>                 Repeatable, ports for the container to expose.
+  --port=<port>                 Port for the container to expose.
   --timeout=<seconds>           How long to wait for old ECS services to stop.
                                 [default: 300]
 ```
@@ -60,12 +60,12 @@ deployment:
   prod:
     tag: /v[0-9]+\.[0-9]+\.[0-9]+/
     commands:
-      - ecs_deploy deploy --env prod --memory-reservation=2048 --port 8080
+      - ecs_deploy deploy --env=prod --memory-reservation=2048 --port=8080
 
   demo:
     branch: master
     commands:
-      - ecs_deploy deploy --env demo --memory-reservation=1024 --port 8080
+      - ecs_deploy deploy --env=demo --memory-reservation=1024 --port=8080
 ```
 
 #### Required Environment Variables

@@ -20,7 +20,7 @@ Options:
   --memory-reservation=<kb>     Memory reservation size for container in KB.
   --memory-reservation-hard     Flag to set memory reservation to a hard
   --cpu=<num>                   CPU credit limit for container.
-  --port=<port>                 Repeatable, ports for the container to expose.
+  --port=<port>                 Port for the container to expose.
   --timeout=<seconds>           How long to wait for old ECS services to stop.
                                 [default: 300]
 """
