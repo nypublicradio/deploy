@@ -49,7 +49,7 @@ machine:
 
 dependencies:
   override:
-    - pip3 install git+https://github.com/nypublicradio/deploy.git
+    - pip3 install -U git+https://github.com/nypublicradio/deploy.git
     - ecs_deploy build
 
 test:
