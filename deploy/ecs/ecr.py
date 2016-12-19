@@ -74,6 +74,17 @@ def get_ecs_log_group_name(aws_ecs_cluster, env):
     return ecs_log_group_name
 
 
+def get_ecs_task_role_arn(aws_account_id, reponame, env):
+    """ aws_account_id: str
+        reponame: str
+        env: str
+        -> ecs_task_role_arn
+    """
+    ecs_task_role_arn = 'arn:aws:iam:{}:role/{}-{}'.format(aws_account_id,
+                                                           reponame, env)
+    return ecs_task_role_arn
+
+
 def pprint_docker(byte_msg):
     str_msg = byte_msg.decode()
     d = json.loads(str_msg)
@@ -118,6 +129,7 @@ class ECSDeploy():
         self.reponame = circle_project_reponame
         self.ecs_cluster_basename = aws_ecs_cluster
         self.aws_default_region = aws_default_region
+        self.aws_account_id = aws_account_id
 
     def build_docker_img(self):
         build_progress = self.docker_client.build('.', tag=self.docker_img_url)
@@ -212,8 +224,11 @@ class ECSDeploy():
             with AWS.
         """
         family = get_ecs_task_name(self.reponame, env)
+        task_role_arn = get_ecs_task_role_arn(self.aws_account_id,
+                                              self.reponame, env)
         client = boto3.client('ecs')
         resp = client.register_task_definition(
+            taskRoleArn=task_role_arn,
             containerDefinitions=[
                 task_def
             ],
