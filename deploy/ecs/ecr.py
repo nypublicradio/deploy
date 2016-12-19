@@ -65,6 +65,15 @@ def get_ecs_cluster_name(aws_ecs_cluster, env):
     return ecs_cluster
 
 
+def get_ecs_log_group_name(aws_ecs_cluster, env):
+    """ aws_ecs_cluster: str
+        env: str
+        -> ecs_log_group_name: str
+    """
+    ecs_log_group_name = '{}-{}/services'.format(aws_ecs_cluster, env)
+    return ecs_log_group_name
+
+
 def pprint_docker(byte_msg):
     str_msg = byte_msg.decode()
     d = json.loads(str_msg)
@@ -108,6 +117,7 @@ class ECSDeploy():
                                                    build_tag)
         self.reponame = circle_project_reponame
         self.ecs_cluster_basename = aws_ecs_cluster
+        self.aws_default_region = aws_default_region
 
     def build_docker_img(self):
         build_progress = self.docker_client.build('.', tag=self.docker_img_url)
@@ -138,11 +148,21 @@ class ECSDeploy():
         """
         ecs_task_name = get_ecs_task_name(self.reponame, env)
         ecs_task_env_vars = get_ecs_task_environment_vars(env)
+        ecs_log_group_name = get_ecs_log_group_name(self.ecs_cluster_basename,
+                                                    env)
         task_def = {
             'name': ecs_task_name,
             'image': self.docker_img_url,
             'essential': True,
-            'environment': ecs_task_env_vars
+            'environment': ecs_task_env_vars,
+            'logConfiguration': {
+                'logDriver': 'awslogs',
+                'options': {
+                    'awslogs-group': ecs_log_group_name,
+                    'awslogs-region': self.aws_default_region,
+                    'awslogs-stream-prefix': self.reponame
+                }
+            }
         }
 
         # Task defs require a soft or hard memory reservation to be set
