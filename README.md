@@ -20,6 +20,7 @@ Usage:
   ecs_deploy deploy --env=<env> --memory-reservation=<kb>
                     [--memory-reservation-hard] [--cpu=<num>]
                     [--port=<port> ...] [--timeout=<seconds>]
+  ecs_deploy cleanup --env=<env> --revisions-to-keep=<num>
 
 Options:
   -h --help                     Show this screen.
@@ -28,15 +29,17 @@ Options:
   # test
   --test-cmd=<cmd>             Test command [default: python setup.py test]
 
-  # build
+  # deploy
   --env=<env>                   Environment (eg. dev|demo|prod|util)
   --memory-reservation=<kb>     Memory reservation size for container in KB.
   --memory-reservation-hard     Flag to set memory reservation to a hard
-                                reservation.
   --cpu=<num>                   CPU credit limit for container.
   --port=<port>                 Port for the container to expose.
   --timeout=<seconds>           How long to wait for old ECS services to stop.
                                 [default: 300]
+
+  # cleanup
+  --revisions-to-keep=<num>     How many previous task definitions to preserve
 ```
 
 #### Circle Example

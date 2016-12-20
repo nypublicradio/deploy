@@ -237,6 +237,26 @@ class ECSDeploy():
         revision = resp['taskDefinition']['taskDefinitionArn']
         return revision
 
+    def deregister_task_defs(self, env, revisions_to_keep):
+        """ env: str
+            revisions_to_keep: int
+
+            revisions_to_keep is an integer that represents how many
+            previous revisions should be preserved.
+        """
+        client = boto3.client('ecs')
+        family = get_ecs_task_name(self.reponame, env)
+        task_def_arns = client.list_task_definitions(
+            familyPrefix=family
+        )['taskDefinitionArns']
+        task_def_arns_to_deregister = task_def_arns[:-revisions_to_keep]
+        for task_def_arn in task_def_arns_to_deregister:
+            resp = client.deregister_task_definition(
+                taskDefinition=task_def_arn
+            )
+            deregistered_arn = resp['taskDefinition']['taskDefinitionArn']
+            print('Deregistered task: {}'.format(deregistered_arn))
+
     def update_ecs_service(self, env, task_def_revision, timeout):
         service = get_ecs_task_name(self.reponame, env)
         cluster = get_ecs_cluster_name(self.ecs_cluster_basename, env)

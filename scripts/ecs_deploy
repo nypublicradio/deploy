@@ -7,6 +7,7 @@ Usage:
   ecs_deploy deploy --env=<env> --memory-reservation=<kb>
                     [--memory-reservation-hard] [--cpu=<num>]
                     [--port=<port> ...] [--timeout=<seconds>]
+  ecs_deploy cleanup --env=<env> --revisions-to-keep=<num>
 
 Options:
   -h --help                     Show this screen.
@@ -23,6 +24,9 @@ Options:
   --port=<port>                 Port for the container to expose.
   --timeout=<seconds>           How long to wait for old ECS services to stop.
                                 [default: 300]
+
+  # cleanup
+  --revisions-to-keep=<num>     How many previous task definitions to preserve
 """
 from deploy import ECSDeploy
 from docopt import docopt
@@ -37,6 +41,8 @@ def enforce_types(args):
         args['--timeout'] = int(args['--timeout'])
     if args['--port']:
         args['--port'] = [int(p) for p in args['--port']]
+    if args['--revisions-to-keep']:
+        args['--revisions-to-keep'] = int(args['--revisions-to-keep'])
     return args
 
 
@@ -59,4 +65,10 @@ if __name__ == '__main__':
             cpu=args['--cpu'],
             ports=args['--port'],
             timeout=args['--timeout']
+        )
+
+    elif args['cleanup']:
+        ecs_deploy.deregister_task_defs(
+            env=args['--env'],
+            revisions_to_keep=args['--revisions-to-keep']
         )
