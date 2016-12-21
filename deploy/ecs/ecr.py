@@ -215,7 +215,6 @@ class ECSDeploy():
         family = get_ecs_task_name(self.reponame, env)
         client = boto3.client('ecs')
         resp = client.register_task_definition(
-            taskRoleArn=family,
             containerDefinitions=[
                 task_def
             ],
