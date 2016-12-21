@@ -51,6 +51,8 @@ machine:
     version: 3.5.2
 
 dependencies:
+  cache_directories:
+    - "~/docker"
   override:
     - pip3 install -U git+https://github.com/nypublicradio/deploy.git
     - ecs_deploy build

@@ -121,9 +121,20 @@ class ECSDeploy():
         self.aws_account_id = aws_account_id
 
     def build_docker_img(self):
+        cache_dir = os.path.join(os.path.expanduser('~'), 'docker')
+        image_cache = os.path.join(cache_dir, 'image.tar')
+        if os.path.isfile(image_cache):
+            print('Using cached image at {}'.format(image_cache))
+            with open(image_cache, 'rb') as f:
+                self.docker_client.load_image(f)
         build_progress = self.docker_client.build('.', tag=self.docker_img_url)
         for step in build_progress:
             pprint_docker(step)
+        os.makedirs(cache_dir, exist_ok=True)
+        image = self.docker_client.get_image(self.docker_img_url)
+        with open(image_cache, 'wb') as f:
+            print('Saving image cache at {}'.format(image_cache))
+            f.write(image.data)
 
     def test_docker_img(self, test_command):
         if not test_command:
