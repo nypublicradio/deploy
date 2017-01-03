@@ -295,7 +295,7 @@ class ECSDeploy():
             timer += timer_increment
             time.sleep(timer_increment)
 
-    def deploy(self, env, memory_reservation, cpu=None,
+    def deploy(self, env, memory_reservation, no_service=False, cpu=None,
                memory_reservation_hard=False, ports=None, timeout=300):
         self.push_ecr_image()
         task_def = self.get_task_def(env,
@@ -304,4 +304,5 @@ class ECSDeploy():
                                      memory_reservation_hard,
                                      ports)
         task_def_revision = self.register_task_def(env, task_def)
-        self.update_ecs_service(env, task_def_revision, timeout)
+        if not no_service:
+            self.update_ecs_service(env, task_def_revision, timeout)

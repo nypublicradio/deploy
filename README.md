@@ -17,7 +17,7 @@ pip install git+https://github.com/nypublicradio/deploy.git
 Usage:
   ecs_deploy build
   ecs_deploy test [--test-cmd=<cmd>]
-  ecs_deploy deploy --env=<env> --memory-reservation=<kb>
+  ecs_deploy deploy --env=<env> --memory-reservation=<kb> [--no-service]
                     [--memory-reservation-hard] [--cpu=<num>]
                     [--port=<port> ...] [--timeout=<seconds>]
   ecs_deploy cleanup --env=<env> --revisions-to-keep=<num>
@@ -32,7 +32,8 @@ Options:
   # deploy
   --env=<env>                   Environment (eg. dev|demo|prod|util)
   --memory-reservation=<kb>     Memory reservation size for container in KB.
-  --memory-reservation-hard     Flag to set memory reservation to a hard
+  --no-service                  Flag to set non-persistent task.
+  --memory-reservation-hard     Flag to set memory reservation to a hard.
   --cpu=<num>                   CPU credit limit for container.
   --port=<port>                 Port for the container to expose.
   --timeout=<seconds>           How long to wait for old ECS services to stop.
