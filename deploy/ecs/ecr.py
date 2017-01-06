@@ -47,7 +47,7 @@ def get_ecs_task_environment_vars(env):
     def strip_prefix(s):
         return s[len(match_prefix):]  # strips <ENV>_ from name
 
-    env_var_defs = []
+    env_var_defs = [{'name': 'ENV', 'value': env}]
     for env_var_name, env_var_val in os.environ.items():
         if env_var_name.startswith(match_prefix):
             stripped_env_var_name = strip_prefix(env_var_name)
