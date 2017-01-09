@@ -127,7 +127,8 @@ class ECSDeploy():
             print('Using cached image at {}'.format(image_cache))
             with open(image_cache, 'rb') as f:
                 self.docker_client.load_image(f)
-        build_progress = self.docker_client.build('.', tag=self.docker_img_url)
+        build_progress = self.docker_client.build('.', rm=False,
+                                                  tag=self.docker_img_url)
         for step in build_progress:
             pprint_docker(step)
         os.makedirs(cache_dir, exist_ok=True)
