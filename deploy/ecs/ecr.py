@@ -6,7 +6,7 @@ import sys
 import time
 
 from base64 import b64decode
-from .settings import with_defaults
+from .settings import with_defaults, deploy_ini
 
 
 def get_docker_image_url(aws_account_id, aws_default_region,
@@ -27,14 +27,19 @@ def get_docker_image_url(aws_account_id, aws_default_region,
     return docker_img
 
 
-def get_ecs_task_name(circle_project_reponame, env):
+def get_ecs_task_name(circle_project_reponame, env, role=None):
     """ circle_project_reponame: str
         env: str
         -> task_name: str
 
         Returns the task name of an ECS task in the format <repo>-<env>.
+        Optionally, a role can distinguish the task <repo>-<env>-<role>.
     """
-    task_name = '{}-{}'.format(circle_project_reponame, env)
+    task_basename = '{}-{}'.format(circle_project_reponame, env)
+    if role:
+        task_name = '{}-{}'.format(task_basename, role)
+    else:
+        task_name = task_basename
     return task_name
 
 
@@ -52,6 +57,11 @@ def get_ecs_task_environment_vars(env):
         if env_var_name.startswith(match_prefix):
             stripped_env_var_name = strip_prefix(env_var_name)
             env_var_def = {'name': stripped_env_var_name, 'value': env_var_val}
+            env_var_defs.append(env_var_def)
+
+    if deploy_ini.has_section(env):
+        for env_var_name, env_var_val in deploy_ini[env].items():
+            env_var_def = {'name': env_var_name, 'value': env_var_val}
             env_var_defs.append(env_var_def)
     return env_var_defs
 
@@ -98,6 +108,10 @@ class ECSServiceUpdateError(Exception):
 
 
 class ContainerTestError(Exception):
+    pass
+
+
+class MissingRoleError(Exception):
     pass
 
 
@@ -154,12 +168,15 @@ class ECSDeploy():
             sys.exit('Tests Failed')
 
     def get_task_def(self, env, memory_reservation, cpu=None,
-                     memory_reservation_hard=False, ports=None):
+                     memory_reservation_hard=False, ports=None,
+                     cmd=None, role=None):
         """ Returns a JSON task template that will be uploaded to ECS
             to create a new task version. Any environment variable prefixed
             with ENV_ will be accessible to the container running the task.
         """
-        ecs_task_name = get_ecs_task_name(self.reponame, env)
+        if cmd and not role:
+            raise MissingRoleError('Cannot specify cmd override without role.')
+        ecs_task_name = get_ecs_task_name(self.reponame, env, role)
         ecs_task_env_vars = get_ecs_task_environment_vars(env)
         ecs_log_group_name = get_ecs_log_group_name(self.ecs_cluster_basename,
                                                     env)
@@ -173,7 +190,7 @@ class ECSDeploy():
                 'options': {
                     'awslogs-group': ecs_log_group_name,
                     'awslogs-region': self.aws_default_region,
-                    'awslogs-stream-prefix': self.reponame
+                    'awslogs-stream-prefix': ecs_task_name
                 }
             }
         }
@@ -189,6 +206,9 @@ class ECSDeploy():
 
         if ports:
             task_def['portMappings'] = [{'containerPort': p} for p in ports]
+
+        if cmd:
+            task_def['command'] = cmd
 
         return task_def
 
@@ -235,7 +255,7 @@ class ECSDeploy():
         revision = resp['taskDefinition']['taskDefinitionArn']
         return revision
 
-    def deregister_task_defs(self, env, revisions_to_keep):
+    def deregister_task_defs(self, env, revisions_to_keep, role=None):
         """ env: str
             revisions_to_keep: int
 
@@ -243,7 +263,7 @@ class ECSDeploy():
             previous revisions should be preserved.
         """
         client = boto3.client('ecs')
-        family = get_ecs_task_name(self.reponame, env)
+        family = get_ecs_task_name(self.reponame, env, role)
         task_def_arns = client.list_task_definitions(
             familyPrefix=family
         )['taskDefinitionArns']
@@ -255,8 +275,8 @@ class ECSDeploy():
             deregistered_arn = resp['taskDefinition']['taskDefinitionArn']
             print('Deregistered task: {}'.format(deregistered_arn))
 
-    def update_ecs_service(self, env, task_def_revision, timeout):
-        service = get_ecs_task_name(self.reponame, env)
+    def update_ecs_service(self, env, task_def_revision, timeout, role=None):
+        service = get_ecs_task_name(self.reponame, env, role)
         cluster = get_ecs_cluster_name(self.ecs_cluster_basename, env)
 
         client = boto3.client('ecs')
@@ -297,13 +317,20 @@ class ECSDeploy():
             time.sleep(timer_increment)
 
     def deploy(self, env, memory_reservation, no_service=False, cpu=None,
-               memory_reservation_hard=False, ports=None, timeout=300):
+               memory_reservation_hard=False, ports=None, cmd=None, role=None,
+               timeout=300):
         self.push_ecr_image()
         task_def = self.get_task_def(env,
                                      memory_reservation,
                                      cpu,
                                      memory_reservation_hard,
-                                     ports)
-        task_def_revision = self.register_task_def(env, task_def)
-        if not no_service:
-            self.update_ecs_service(env, task_def_revision, timeout)
+                                     ports,
+                                     cmd,
+                                     role)
+        if env == 'test':
+            from pprint import pprint
+            pprint(task_def)
+        else:
+            task_def_revision = self.register_task_def(env, task_def)
+            if not no_service:
+                self.update_ecs_service(env, task_def_revision, timeout, role)

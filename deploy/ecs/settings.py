@@ -29,7 +29,21 @@ class UnsetEnvironmentVariable(Exception):
         super().__init__(message, *args, **kwargs)
 
 
-def get_env_var(arg_name):
+def load_deploy_ini(filename='deploy.ini'):
+    import configparser
+    config = configparser.ConfigParser()
+    config.optionxform = str
+    if os.path.isfile(filename):
+        config.read(filename)
+        return config
+    else:
+        config.add_section('deploy')
+
+
+deploy_ini = load_deploy_ini()
+
+
+def get_env_var(upper_arg_name):
     """ arg_name: str
         -> str
         Returns the value of an environment variable from a string.
@@ -38,7 +52,6 @@ def get_env_var(arg_name):
         Preference to is given to CIRCLE_TAG which is the value of a git
         tag.
     """
-    upper_arg_name = arg_name.upper()
     if upper_arg_name == 'BUILD_TAG':
         env_var = os.environ.get('CIRCLE_TAG', os.environ.get('CIRCLE_SHA1'))
         if not env_var:
@@ -56,13 +69,16 @@ def with_defaults(func):
         with the value of a corresponding environment variable.
         eg. an unset aws_region will take the values of AWS_REGION
     """
+
     def wraps(*args, **kwargs):
         argspec = inspect.getargspec(func)
         arg_names = argspec.args[len(args):]
         unset_args = [s for s in arg_names if s not in kwargs.keys()]
 
         for unset_arg in unset_args:
-            kwargs[unset_arg] = (get_env_var(unset_arg))
+            upper_arg_name = unset_arg.upper()
+            kwargs[unset_arg] = (deploy_ini['deploy'].get(upper_arg_name)
+                                 or get_env_var(upper_arg_name))
 
         return func(*args, **kwargs)
     return wraps
