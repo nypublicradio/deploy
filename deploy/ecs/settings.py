@@ -38,6 +38,7 @@ def load_deploy_ini(filename='deploy.ini'):
         return config
     else:
         config.add_section('deploy')
+        return config
 
 
 deploy_ini = load_deploy_ini()
