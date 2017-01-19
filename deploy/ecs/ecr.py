@@ -91,11 +91,12 @@ def pprint_docker(byte_msg):
         msg = d['stream']
     elif 'status' in d:
         if d.get('progressDetail'):
-            msg = '{} ({}/{}) {} {}'.format(d['status'],
-                                            d['progressDetail']['current'],
-                                            d['progressDetail']['total'],
-                                            d['id'],
-                                            d['progress'])
+            status = d.get('status', '')
+            current = d['progressDetail'].get('current', '')
+            total = d['progressDetail'].get('total', '')
+            id_ = d.get('id', '')
+            progress = d.get('progress', '')
+            msg = f'{status} ({current}/{total}) {id_} {progress}'
         else:
             msg = d['status']
     else:
@@ -263,7 +264,7 @@ class ECSDeploy():
         repo, tag = self.docker_img_url.split(':')
         for line in self.docker_client.api.push(repository=repo, tag=tag,
                                                 stream=True):
-            print(line)
+            pprint_docker(line)
 
     def register_task_def(self, env, task_def):
         """ Utilizes the boto3 library to register a task definition
