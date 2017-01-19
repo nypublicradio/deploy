@@ -162,11 +162,12 @@ class ECSDeploy():
                     image_id = image_metadata['Id']
                     image = self.docker_client.images.get(image_id)
                     cache_file = os.path.join(cache_dir, image.id)
-                    with open(cache_file, 'wb') as f:
-                        print('Saving image cache at {}'.format(cache_file))
-                        resp = image.save()
-                        f.write(resp.data)
-                        saved_images.append(cache_file)
+                    if not os.path.isfile(cache_file):
+                        with open(cache_file, 'wb') as f:
+                            print('Saving image cache at {}'.format(cache_file))
+                            resp = image.save()
+                            f.write(resp.data)
+                            saved_images.append(cache_file)
                 except docker.errors.ImageNotFound:
                     pass  # skip missing intermediate images from source
 
