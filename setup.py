@@ -23,7 +23,7 @@ setup(
     license='BSD',
     install_requires=[
         'boto3',
-        'docker-py',
+        'docker',
         'docopt',
         'slackclient'
     ],

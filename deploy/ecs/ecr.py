@@ -124,7 +124,7 @@ class ECSDeploy():
                  aws_default_region=None,
                  build_tag=None,
                  circle_project_reponame=None):
-        self.docker_client = docker.Client(version='1.21')
+        self.docker_client = docker.from_env()
         self.docker_img_url = get_docker_image_url(aws_account_id,
                                                    aws_default_region,
                                                    circle_project_reponame,
@@ -134,38 +134,63 @@ class ECSDeploy():
         self.aws_default_region = aws_default_region
         self.aws_account_id = aws_account_id
 
-    def build_docker_img(self):
+    def build_docker_img(self, no_use_cache=False, cleanup_cache=False):
         cache_dir = os.path.join(os.path.expanduser('~'), 'docker')
-        image_cache = os.path.join(cache_dir, 'image.tar')
-        if os.path.isfile(image_cache):
-            print('Using cached image at {}'.format(image_cache))
-            with open(image_cache, 'rb') as f:
-                self.docker_client.load_image(f)
-        build_progress = self.docker_client.build('.', rm=False,
-                                                  tag=self.docker_img_url)
-        for step in build_progress:
-            pprint_docker(step)
-        os.makedirs(cache_dir, exist_ok=True)
-        image = self.docker_client.get_image(self.docker_img_url)
-        with open(image_cache, 'wb') as f:
-            print('Saving image cache at {}'.format(image_cache))
-            f.write(image.data)
+
+        # load image caches
+        if not no_use_cache:
+            os.makedirs(cache_dir, exist_ok=True)
+            for root, dirname, files in os.walk(cache_dir):
+                for filename in files:
+                    file_path = os.path.join(root, filename)
+                    with open(file_path, 'rb') as f:
+                        print('Loading cached image {}'
+                              .format(file_path))
+                        self.docker_client.images.load(f)
+
+        for line in self.docker_client.api.build(path='.', rm=False,
+                                                 tag=self.docker_img_url):
+
+            pprint_docker(line)
+        new_image = self.docker_client.images.get(self.docker_img_url)
+
+        # save image cache
+        if not no_use_cache:
+            saved_images = []
+            for image_metadata in new_image.history():
+                try:
+                    image_id = image_metadata['Id']
+                    image = self.docker_client.images.get(image_id)
+                    cache_file = os.path.join(cache_dir, image.id)
+                    with open(cache_file, 'wb') as f:
+                        print('Saving image cache at {}'.format(cache_file))
+                        resp = image.save()
+                        f.write(resp.data)
+                        saved_images.append(cache_file)
+                except docker.errors.ImageNotFound:
+                    pass  # skip missing intermediate images from source
+
+        # remove stale cache
+        if cleanup_cache:
+            for root, dirname, filenames in os.walk(cache_dir):
+                for filename in filenames:
+                    if filename not in saved_images:
+                        os.remove(filename)
 
     def test_docker_img(self, test_command):
         if not test_command:
             raise ContainerTestError('Test command cannot be empty.')
-        container = self.docker_client.create_container(
-            image=self.docker_img_url,
-            command=test_command
-        )
-        self.docker_client.start(container['Id'])
-        status_code = self.docker_client.wait(container['Id'])
-        print(self.docker_client.logs(container=container['Id']).decode())
-        if status_code == 0:
+        try:
+            print(self.docker_client.containers.run(
+                image=self.docker_img_url,
+                command=test_command,
+                detach=False
+            ))
+        except docker.errors.ContainerError:
+            sys.exit('Tests Failed')
+        finally:
             print('Tests Passed')
             sys.exit(0)
-        else:
-            sys.exit('Tests Failed')
 
     def get_task_def(self, env, memory_reservation, cpu=None,
                      memory_reservation_hard=False, ports=None,
@@ -234,11 +259,12 @@ class ECSDeploy():
 
         # On the cli we'd use "docker push repo:tag"
         # but here they need to be split.
-        repository, tag = self.docker_img_url.split(':')
-        self.docker_client.push(
-            repository=repository,
-            tag=tag
-        )
+        repo, tag = self.docker_img_url.split(':')
+        image = self.docker_client.images.get(self.docker_img_url)
+        for line in image.push(repository=repo, tag=tag, stream=True):
+            pprint_docker(line)
+        for line in image.push(repository=repo, tag='latest', stream=True):
+            pprint_docker(line)
 
     def register_task_def(self, env, task_def):
         """ Utilizes the boto3 library to register a task definition
