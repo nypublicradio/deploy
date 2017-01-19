@@ -264,9 +264,6 @@ class ECSDeploy():
         for line in self.docker_client.api.push(repository=repo, tag=tag,
                                                 stream=True):
             pprint_docker(line)
-        for line in self.docker_client.api.push(repository=repo, tag='latest',
-                                                stream=True):
-            pprint_docker(line)
 
     def register_task_def(self, env, task_def):
         """ Utilizes the boto3 library to register a task definition
