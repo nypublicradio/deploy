@@ -124,7 +124,7 @@ class ECSDeploy():
                  aws_default_region=None,
                  build_tag=None,
                  circle_project_reponame=None):
-        self.docker_client = docker.from_env()
+        self.docker_client = docker.from_env(version='1.21')
         self.docker_img_url = get_docker_image_url(aws_account_id,
                                                    aws_default_region,
                                                    circle_project_reponame,
