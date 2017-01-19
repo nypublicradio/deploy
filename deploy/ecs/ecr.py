@@ -261,10 +261,11 @@ class ECSDeploy():
         # On the cli we'd use "docker push repo:tag"
         # but here they need to be split.
         repo, tag = self.docker_img_url.split(':')
-        image = self.docker_client.images.get(self.docker_img_url)
-        for line in image.push(repository=repo, tag=tag, stream=True):
+        for line in self.docker_client.api.push(repository=repo, tag=tag,
+                                                stream=True):
             pprint_docker(line)
-        for line in image.push(repository=repo, tag='latest', stream=True):
+        for line in self.docker_client.api.push(repository=repo, tag='latest',
+                                                stream=True):
             pprint_docker(line)
 
     def register_task_def(self, env, task_def):
