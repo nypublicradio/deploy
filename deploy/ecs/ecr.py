@@ -2,6 +2,7 @@ import boto3
 import docker
 import json
 import os
+import subprocess
 import sys
 import time
 
@@ -172,15 +173,20 @@ class ECSDeploy():
                             print('Did not find base image '
                                   '{}'.format(base_image_name))
 
-            # save base image and new image to cache
-            images = [(base_image, 'base.tar'), (new_image, 'image.tar')]
-            for image, cache_file_name in images:
+            # save images to cache
+            # tags are not properly saved with the docker python sdk
+            images = [(base_image, base_image_name),
+                      (new_image, self.docker_img_url)]
+            for image, image_name in images:
                 if image:
-                    cache_file = os.path.join(cache_dir, cache_file_name)
-                    with open(cache_file, 'wb') as f:
-                        print('Saving image cache at {}'.format(cache_file))
-                        resp = image.save()
-                        f.write(resp.data)
+                    cache_file = os.path.join(cache_dir, image.id)
+                    print('Saving image cache at {}'.format(cache_file))
+                    args = ['docker', 'save', '-o', cache_file, image_name]
+                    process = subprocess.Popen(args, stdout=subprocess.PIPE,
+                                               stderr=subprocess.STDOUT)
+                    for line in process.stdout:
+                        print(line)
+                    process.wait()
 
     def test_docker_img(self, test_command):
         if not test_command:
