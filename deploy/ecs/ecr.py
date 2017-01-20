@@ -135,7 +135,7 @@ class ECSDeploy():
         self.aws_default_region = aws_default_region
         self.aws_account_id = aws_account_id
 
-    def build_docker_img(self, no_use_cache=False, cleanup_cache=False):
+    def build_docker_img(self, no_use_cache=False):
         cache_dir = os.path.join(os.path.expanduser('~'), 'docker')
 
         # load image caches
@@ -157,27 +157,28 @@ class ECSDeploy():
 
         # save image cache
         if not no_use_cache:
-            saved_images = []
-            for image_metadata in new_image.history():
-                try:
-                    image_id = image_metadata['Id']
-                    image = self.docker_client.images.get(image_id)
-                    cache_file = os.path.join(cache_dir, image.id)
-                    if not os.path.isfile(cache_file):
-                        with open(cache_file, 'wb') as f:
-                            print('Saving image cache at {}'.format(cache_file))
-                            resp = image.save()
-                            f.write(resp.data)
-                            saved_images.append(cache_file)
-                except docker.errors.ImageNotFound:
-                    pass  # skip missing intermediate images from source
+            base_image = None
 
-        # remove stale cache
-        if cleanup_cache:
-            for root, dirname, filenames in os.walk(cache_dir):
-                for filename in filenames:
-                    if filename not in saved_images:
-                        os.remove(filename)
+            # determine base image from Dockerfile
+            with open('Dockerfile', 'r') as f:
+                for line in f:
+                    if line.startswith('FROM'):
+                        base_image_name = line.strip().split(' ', 1)[1]
+                        try:
+                            base_image = \
+                                self.docker_client.images.get(base_image_name)
+                        except docker.errors.ImageNotFound:
+                            print(f'Did not find base image {base_image_name}')
+
+            # save base image and new image to cache
+            images = [(base_image, 'base.tar'), (new_image, 'image.tar')]
+            for image, cache_file_name in images:
+                if image:
+                    cache_file = os.path.join(cache_dir, cache_file_name)
+                    with open(cache_file, 'wb') as f:
+                        print('Saving image cache at {}'.format(cache_file))
+                        resp = image.save()
+                        f.write(resp.data)
 
     def test_docker_img(self, test_command):
         if not test_command:

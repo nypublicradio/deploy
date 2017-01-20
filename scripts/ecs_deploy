@@ -2,7 +2,7 @@
 """ NYPR ECS Deployment Tool.
 
 Usage:
-  ecs_deploy build  [--build-tag=<tag>] [(--no-use-cache | --cleanup-cache)]
+  ecs_deploy build  [--build-tag=<tag>] [--no-use-cache]
   ecs_deploy test   [--build-tag=<tag>] [--test-cmd=<cmd>]
   ecs_deploy deploy --env=<env> --memory-reservation=<kb>
                     [--build-tag=<tag>] [--no-service]
@@ -18,11 +18,6 @@ Options:
 
   # build
   --no-use-cache                Do not use cached files.
-  --cleanup-cache               Removes any files from ~/docker that were not
-                                created as part of the latest image's build
-                                history. This can be dangerous for users running
-                                locally that may have an existing ~/docker
-                                directory! Only use in CircleCI.
 
   # test
   --test-cmd=<cmd>              Test command [default: python setup.py test]
@@ -78,8 +73,7 @@ if __name__ == '__main__':
         ecs_deploy = ECSDeploy()
 
     if args['build']:
-        ecs_deploy.build_docker_img(no_use_cache=args['--no-use-cache'],
-                                    cleanup_cache=args['--cleanup-cache'])
+        ecs_deploy.build_docker_img(no_use_cache=args['--no-use-cache'])
 
     elif args['test']:
         ecs_deploy.test_docker_img(test_command=args['--test-cmd'])
