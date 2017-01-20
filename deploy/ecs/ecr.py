@@ -2,7 +2,6 @@ import boto3
 import docker
 import json
 import os
-import subprocess
 import sys
 import time
 
@@ -140,56 +139,39 @@ class ECSDeploy():
         self.aws_default_region = aws_default_region
         self.aws_account_id = aws_account_id
 
-    def build_docker_img(self, no_use_cache=False):
-        cache_dir = os.path.join(os.path.expanduser('~'), 'docker')
+    def load_docker_cache(self, cache_dir):
+        for root, dirname, files in os.walk(cache_dir):
+            for filename in files:
+                file_path = os.path.join(root, filename)
+                with open(file_path, 'rb') as f:
+                    print('Loading cached image {}'.format(file_path))
+                    self.docker_client.images.load(f)
 
-        # load image caches
+    def save_docker_cache(self, cache_dir):
+        try:
+            image = self.docker_client.api.get_image(self.docker_img_url)
+        except docker.errors.ImageNotFound:
+            print('Did not find image {}.'.format(self.docker_img_url))
+            return
+
+        cache_file = os.path.join(cache_dir, 'image.tar')
+        with open(cache_file, 'wb') as f:
+            print('Saving image cache at {}'.format(cache_file))
+            f.write(image.data)
+
+    def build_docker_img(self, no_use_cache=False):
         if not no_use_cache:
+            cache_dir = os.path.join(os.path.expanduser('~'), 'docker')
             os.makedirs(cache_dir, exist_ok=True)
-            for root, dirname, files in os.walk(cache_dir):
-                for filename in files:
-                    file_path = os.path.join(root, filename)
-                    with open(file_path, 'rb') as f:
-                        print('Loading cached image {}'
-                              .format(file_path))
-                        self.docker_client.images.load(f)
+            self.load_docker_cache(cache_dir)
 
         for line in self.docker_client.api.build(path='.', rm=False,
                                                  tag=self.docker_img_url):
 
             pprint_docker(line)
-        new_image = self.docker_client.images.get(self.docker_img_url)
 
-        # save image cache
         if not no_use_cache:
-            base_image = None
-
-            # determine base image from Dockerfile
-            with open('Dockerfile', 'r') as f:
-                for line in f:
-                    if line.startswith('FROM'):
-                        base_image_name = line.strip().split(' ', 1)[1]
-                        try:
-                            base_image = \
-                                self.docker_client.images.get(base_image_name)
-                        except docker.errors.ImageNotFound:
-                            print('Did not find base image '
-                                  '{}'.format(base_image_name))
-
-            # save images to cache
-            # tags are not properly saved with the docker python sdk
-            images = [(base_image, base_image_name),
-                      (new_image, self.docker_img_url)]
-            for image, image_name in images:
-                if image:
-                    cache_file = os.path.join(cache_dir, image.id)
-                    print('Saving image cache at {}'.format(cache_file))
-                    args = ['docker', 'save', '-o', cache_file, image_name]
-                    process = subprocess.Popen(args, stdout=subprocess.PIPE,
-                                               stderr=subprocess.STDOUT)
-                    for line in process.stdout:
-                        print(line)
-                    process.wait()
+            self.save_docker_cache(cache_dir)
 
     def test_docker_img(self, test_command):
         if not test_command:
