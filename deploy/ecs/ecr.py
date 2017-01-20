@@ -140,6 +140,10 @@ class ECSDeploy():
         self.aws_account_id = aws_account_id
 
     def load_docker_cache(self, cache_dir):
+        """ cache_dir: str
+        -> None
+        Loads all saved docker images from a given directory.
+        """
         for root, dirname, files in os.walk(cache_dir):
             for filename in files:
                 file_path = os.path.join(root, filename)
@@ -147,17 +151,59 @@ class ECSDeploy():
                     print('Loading cached image {}'.format(file_path))
                     self.docker_client.images.load(f)
 
-    def save_docker_cache(self, cache_dir):
+    def get_base_image_from_dockerfile(self):
+        """
+        -> HTTPResponse
+        Returns an HTTPReponse object.
+        The .data property of this object contains the binary data of an image.
+        The image is selected based on the FROM... line of a Dockerfile.
+        """
+        with open('Dockerfile', 'r') as f:
+            for line in f:
+                if line.startswith('FROM '):
+                    _, base_image_name = line.strip().split(' ', 1)
+                    break
+            else:
+                print('Did not find FROM block in Dockerfile.')
+                return
         try:
-            image = self.docker_client.api.get_image(self.docker_img_url)
+            base_image = self.docker_client.api.get_image(base_image_name)
+        except docker.errors.ImageNotFound:
+            print('Did not find image {}.'.format(base_image_name))
+            base_image = None
+        finally:
+            return base_image
+
+    def get_new_image(self):
+        """
+        -> HTTPResponse
+        Returns an HTTPResponse object.
+        The .data property of this object contains the binary data of an image.
+        The image is selected based on the repo/tag of the current build.
+        """
+        try:
+            new_image = self.docker_client.api.get_image(self.docker_img_url)
         except docker.errors.ImageNotFound:
             print('Did not find image {}.'.format(self.docker_img_url))
-            return
+            new_image = None
+        finally:
+            return new_image
 
-        cache_file = os.path.join(cache_dir, 'image.tar')
-        with open(cache_file, 'wb') as f:
-            print('Saving image cache at {}'.format(cache_file))
-            f.write(image.data)
+    def save_docker_cache(self, cache_dir):
+        """ cache_dir: str
+        -> None
+        Saves base image and completed image to the cache_dir.
+        Each image is acquired using the low-level docker.api.get_image method
+        so that tags are preserved when saving.
+        """
+        base_image = self.get_base_image_from_dockerfile()
+        new_image = self.get_new_image()
+        images = [(base_image, 'base.tar'), (new_image, 'image.tar')]
+        for image, cache_file_name in images:
+            cache_file = os.path.join(cache_dir, cache_file_name)
+            with open(cache_file, 'wb') as f:
+                print('Saving image cache at {}'.format(cache_file))
+                f.write(image.data)
 
     def build_docker_img(self, no_use_cache=False):
         if not no_use_cache:

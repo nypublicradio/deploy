@@ -6,7 +6,7 @@ from setuptools import setup
 
 setup(
     name='nypr.deploy',
-    version='0.0.2',
+    version='0.0.3',
     author='NYPR Digital',
     author_email='digitalops@nypublicradio.org',
     url='https://github.com/nypublicradio/deploy',
@@ -24,8 +24,7 @@ setup(
     install_requires=[
         'boto3',
         'docker',
-        'docopt',
-        'slackclient'
+        'docopt'
     ],
     scripts=[
         'scripts/ecs_deploy'
