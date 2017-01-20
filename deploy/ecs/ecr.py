@@ -86,6 +86,9 @@ def get_ecs_log_group_name(aws_ecs_cluster, env):
 
 
 def pprint_docker(byte_msg):
+    """ byte_msg: bytes
+        -> None
+    """
     str_msg = byte_msg.decode()
     d = json.loads(str_msg)
     if 'stream' in d:
