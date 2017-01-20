@@ -96,7 +96,8 @@ def pprint_docker(byte_msg):
             total = d['progressDetail'].get('total', '')
             id_ = d.get('id', '')
             progress = d.get('progress', '')
-            msg = f'{status} ({current}/{total}) {id_} {progress}'
+            msg = '{} ({}/{}) {} {}'.format(status, current, total,
+                                            id_, progress)
         else:
             msg = d['status']
     else:
@@ -168,7 +169,8 @@ class ECSDeploy():
                             base_image = \
                                 self.docker_client.images.get(base_image_name)
                         except docker.errors.ImageNotFound:
-                            print(f'Did not find base image {base_image_name}')
+                            print('Did not find base image '
+                                  '{}'.format(base_image_name))
 
             # save base image and new image to cache
             images = [(base_image, 'base.tar'), (new_image, 'image.tar')]

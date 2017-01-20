@@ -15,7 +15,7 @@ pip install git+https://github.com/nypublicradio/deploy.git
  NYPR ECS Deployment Tool.
 
 Usage:
-  ecs_deploy build  [--build-tag=<tag>]
+  ecs_deploy build  [--build-tag=<tag>] [--no-use-cache]
   ecs_deploy test   [--build-tag=<tag>] [--test-cmd=<cmd>]
   ecs_deploy deploy --env=<env> --memory-reservation=<kb>
                     [--build-tag=<tag>] [--no-service]
@@ -29,13 +29,14 @@ Options:
   --version                     Show version.
   --build-tag=<tag>             Manually specify a build tag.
 
+  # build
+  --no-use-cache                Do not use cached files.
+
   # test
   --test-cmd=<cmd>              Test command [default: python setup.py test]
 
   # deploy
-  --env=<env>                   Environment (eg. test|demo|prod) using "test"
-                                as the environment will simply print the
-                                task definition and exit.
+  --env=<env>                   Environment (eg. dev|demo|prod|util)
   --memory-reservation=<kb>     Memory reservation size for container in KB.
   --no-service                  Flag to set non-persistent task.
   --memory-reservation-hard     Flag to set memory reservation to a hard.
@@ -62,7 +63,7 @@ machine:
   services:
     - docker
   python:
-    version: 3.5.2
+    version: 3.6.0
 
 dependencies:
   cache_directories:
