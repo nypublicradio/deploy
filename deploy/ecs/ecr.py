@@ -306,11 +306,11 @@ class ECSDeploy():
                                                 stream=True):
             pprint_docker(line)
 
-    def register_task_def(self, env, task_def):
+    def register_task_def(self, env, task_def, role=None):
         """ Utilizes the boto3 library to register a task definition
             with AWS.
         """
-        family = get_ecs_task_name(self.reponame, env)
+        family = get_ecs_task_name(self.reponame, env, role)
         client = boto3.client('ecs')
         resp = client.register_task_definition(
             containerDefinitions=[
@@ -397,6 +397,6 @@ class ECSDeploy():
             from pprint import pprint
             pprint(task_def)
         else:
-            task_def_revision = self.register_task_def(env, task_def)
+            task_def_revision = self.register_task_def(env, task_def, role)
             if not no_service:
                 self.update_ecs_service(env, task_def_revision, timeout, role)
