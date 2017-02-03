@@ -223,16 +223,19 @@ class ECSDeploy():
         if not test_command:
             raise ContainerTestError('Test command cannot be empty.')
         try:
-            print(self.docker_client.containers.run(
+            log = self.docker_client.containers.run(
                 image=self.docker_img_url,
                 command=test_command,
-                detach=False
-            ))
-        except docker.errors.ContainerError:
+                detach=False,
+                stdout=True,
+                stderr=True
+            )
+            print(log.decode())
+        except docker.errors.ContainerError as e:
+            print(e)
             sys.exit('Tests Failed')
-        finally:
-            print('Tests Passed')
-            sys.exit(0)
+        print('Tests Passed')
+        sys.exit(0)
 
     def get_task_def(self, env, memory_reservation, cpu=None,
                      memory_reservation_hard=False, ports=None,
