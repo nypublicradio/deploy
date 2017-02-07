@@ -138,6 +138,7 @@ class ECSDeploy():
         self.ecs_cluster_basename = aws_ecs_cluster
         self.aws_default_region = aws_default_region
         self.aws_account_id = aws_account_id
+        self.partial_tag = '{}:partial'.format(circle_project_reponame)
 
     def load_docker_cache(self, cache_dir):
         """ cache_dir: str
@@ -171,8 +172,7 @@ class ECSDeploy():
         except docker.errors.ImageNotFound:
             print('Did not find image {}.'.format(base_image_name))
             base_image = None
-        finally:
-            return base_image
+        return base_image
 
     def get_new_image(self):
         """
@@ -186,10 +186,24 @@ class ECSDeploy():
         except docker.errors.ImageNotFound:
             print('Did not find image {}.'.format(self.docker_img_url))
             new_image = None
-        finally:
-            return new_image
+        return new_image
 
-    def save_docker_cache(self, cache_dir):
+    def get_partial_image(self):
+        """
+        -> HTTPResponse
+        Returns an HTTPResponse object.
+        The .data property of this object contains the binary data of an image.
+        The image is selected based on the partial image tag.
+        This only returns when images are built with --with-circle-hack flag.
+        """
+        try:
+            partial_image = self.docker_client.api.get_image(self.partial_tag)
+        except docker.errors.ImageNotFound:
+            print('Did not find image {}.'.format(self.partial_tag))
+            partial_image = None
+        return partial_image
+
+    def save_docker_cache(self, cache_dir, with_circle_hack):
         """ cache_dir: str
         -> None
         Saves base image and completed image to the cache_dir.
@@ -199,25 +213,92 @@ class ECSDeploy():
         base_image = self.get_base_image_from_dockerfile()
         new_image = self.get_new_image()
         images = [(base_image, 'base.tar'), (new_image, 'image.tar')]
+        if with_circle_hack:
+            partial_image = self.get_partial_image()
+            images.append((partial_image, 'partial.tar'))
         for image, cache_file_name in images:
             cache_file = os.path.join(cache_dir, cache_file_name)
             with open(cache_file, 'wb') as f:
                 print('Saving image cache at {}'.format(cache_file))
                 f.write(image.data)
 
-    def build_docker_img(self, no_use_cache=False):
+    def hack_dockerfile(self):
+        """
+        CircleCI uses a filesystem that prevents access to intermediate
+        Docker containers. This presents a problem when caching because
+        we can only cache the base & final images; if dependencies are
+        installed somewhere in the middle they must be installed every build.
+        This is an ugly hack to split the Dockerfile at our custom
+        `python setup.py requirements` stage, creating an intermediate
+        container "<reponame>:partial" that will be cached.
+        """
+        import tarfile
+        from io import BytesIO
+
+        ignore_list = [
+            '.git',
+            '.cache'
+        ]
+
+        def ignore(filename):
+            if any(s in filename for s in ignore_list):
+                return True
+            else:
+                return False
+
+        def build(dockerfile_str, build_tag):
+            dockerfile = BytesIO()
+            dockerfile.write(dockerfile_str.encode('utf-8'))
+            dockerfile.seek(0)
+
+            tar_fileobj = BytesIO()
+            with tarfile.open(fileobj=tar_fileobj, mode='w') as tar:
+                tar.add('.', recursive=True, exclude=ignore)
+                tar_info = tar.getmember('./Dockerfile')
+                tar_info.size = dockerfile.getbuffer().nbytes
+                tar.addfile(tar_info, dockerfile)
+            tar_fileobj.seek(0)
+
+            for line in self.docker_client.api.build(fileobj=tar_fileobj,
+                                                     custom_context=True,
+                                                     rm=False,
+                                                     tag=build_tag):
+                pprint_docker(line)
+
+        def split_dockerfile():
+            partial_container = ''
+            full_container = 'FROM {}\n'.format(self.partial_tag)
+            with open('Dockerfile', 'r') as f:
+                for line in f:
+                    if 'python setup.py requirements' not in line:
+                        partial_container += line
+                    else:
+                        partial_container += line
+                        break
+                for line in f:
+                    full_container += line
+            return partial_container, full_container
+
+        partial_dockerfile_str, full_dockerfile_str = split_dockerfile()
+        build(partial_dockerfile_str, self.partial_tag)
+        build(full_dockerfile_str, self.docker_img_url)
+
+    def build_docker_img(self, no_use_cache=False, with_circle_hack=False):
         if not no_use_cache:
             cache_dir = os.path.join(os.path.expanduser('~'), 'docker')
             os.makedirs(cache_dir, exist_ok=True)
             self.load_docker_cache(cache_dir)
 
-        for line in self.docker_client.api.build(path='.', rm=False,
-                                                 tag=self.docker_img_url):
+        if with_circle_hack:
+            self.hack_dockerfile()
+        else:
+            for line in self.docker_client.api.build(path='.', rm=False,
+                                                     tag=self.docker_img_url):
 
-            pprint_docker(line)
+                pprint_docker(line)
 
         if not no_use_cache:
-            self.save_docker_cache(cache_dir)
+            self.save_docker_cache(cache_dir, with_circle_hack)
 
     def test_docker_img(self, test_command):
         if not test_command:

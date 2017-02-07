@@ -15,7 +15,7 @@ pip install git+https://github.com/nypublicradio/deploy.git
  NYPR ECS Deployment Tool.
 
 Usage:
-  ecs_deploy build  [--build-tag=<tag>] [--no-use-cache]
+  ecs_deploy build  [--build-tag=<tag>] [--no-use-cache] [--with-circle-hack]
   ecs_deploy test   [--build-tag=<tag>] [--test-cmd=<cmd>]
   ecs_deploy deploy --env=<env> --memory-reservation=<kb>
                     [--build-tag=<tag>] [--no-service]
@@ -31,6 +31,9 @@ Options:
 
   # build
   --no-use-cache                Do not use cached files.
+  --with-circle-hack            Splits the Dockerfile at the requirements
+                                installation step to avoid re-building
+                                virtualenvrionments unless setup.py changes.
 
   # test
   --test-cmd=<cmd>              Test command [default: python setup.py test]
