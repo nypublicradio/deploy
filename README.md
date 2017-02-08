@@ -22,6 +22,7 @@ Usage:
                     [--memory-reservation-hard] [--cpu=<num>]
                     [--port=<port> ...] [--timeout=<seconds>]
                     [(--cmd=<cmd> --role=<role>)]
+  ecs_deploy push   [--bulid-tag=<tag>]
   ecs_deploy cleanup --env=<env> --revisions-to-keep=<num> [--role=<role>]
 
 Options:
@@ -53,6 +54,9 @@ Options:
                                 used to distinguish between tasks/services
                                 for repos that require multiple containers to
                                 run (eg. a worker and web interface).
+
+  # push                        Push the docker image without modifying any
+                                ECS services or tasks.
 
   # cleanup
   --revisions-to-keep=<num>     How many previous task definitions to preserve

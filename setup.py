@@ -6,7 +6,7 @@ from setuptools import setup
 
 setup(
     name='nypr.deploy',
-    version='0.0.4',
+    version='0.0.5',
     author='NYPR Digital',
     author_email='digitalops@nypublicradio.org',
     url='https://github.com/nypublicradio/deploy',
