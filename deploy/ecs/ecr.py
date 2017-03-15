@@ -66,6 +66,29 @@ def get_ecs_task_environment_vars(env):
     return env_var_defs
 
 
+def backup_secrets(circle_project_reponame, s3_bucket):
+    """ s3_bucket: str
+        -> Dict
+    """
+    s3 = boto3.resource('s3')
+    bucket = s3.Bucket(s3_bucket)
+    s3_key = '{}.json'.format(circle_project_reponame)
+    secrets = {
+        'demo': [],
+        'prod': []
+    }
+    for env in secrets.keys():
+        secrets[env] = get_ecs_task_environment_vars(env)
+    json_blob = bytes(json.dumps(secrets), 'utf-8')
+    bucket.put_object(
+        ACL='private',
+        Body=json_blob,
+        ContentEncoding='utf-8',
+        ContentType='application/json',
+        Key=s3_key
+    )
+
+
 def get_ecs_cluster_name(aws_ecs_cluster, env):
     """ aws_ecs_cluster: str
         env: str
@@ -465,6 +488,9 @@ class ECSDeploy():
                 stale = False
             timer += timer_increment
             time.sleep(timer_increment)
+
+    def backup_secrets(self, s3_bucket):
+        backup_secrets(self.reponame, s3_bucket)
 
     def deploy(self, env, memory_reservation, no_service=False, cpu=None,
                memory_reservation_hard=False, ports=None, cmd=None, role=None,

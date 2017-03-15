@@ -10,6 +10,7 @@ Usage:
                     [--port=<port> ...] [--timeout=<seconds>]
                     [(--cmd=<cmd> --role=<role>)]
   ecs_deploy push   [--build-tag=<tag>]
+  ecs_deploy secrets [--build-tag=<tag>] --s3-bucket=<bucket>
   ecs_deploy cleanup --env=<env> --revisions-to-keep=<num> [--role=<role>]
 
 Options:
@@ -44,6 +45,9 @@ Options:
 
   # push                        Push the docker image without modifying any
                                 ECS services or tasks.
+
+  # secrets                     Backup the env var secrets to an s3 bucket.
+  --s3-bucket=<bucket>          Specify S3 bucket for backup.
 
   # cleanup
   --revisions-to-keep=<num>     How many previous task definitions to preserve
@@ -110,3 +114,7 @@ if __name__ == '__main__':
 
     elif args['push']:
         ecs_deploy.push_ecr_image()
+    elif args['secrets']:
+        ecs_deploy.backup_secrets(
+            s3_bucket=args['--s3-bucket']
+        )
