@@ -24,7 +24,8 @@ setup(
     install_requires=[
         'boto3',
         'docker',
-        'docopt'
+        'docopt',
+        'requests>=2.18.1'
     ],
     scripts=[
         'scripts/ecs_deploy'
