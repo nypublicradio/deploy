@@ -285,8 +285,7 @@ class ECSDeploy():
             for line in self.docker_client.api.build(fileobj=tar_fileobj,
                                                      custom_context=True,
                                                      rm=False,
-                                                     tag=build_tag,
-                                                     timeout=None):
+                                                     tag=build_tag):
                 pprint_docker(line)
 
         def split_dockerfile():
@@ -317,8 +316,7 @@ class ECSDeploy():
             self.hack_dockerfile()
         else:
             for line in self.docker_client.api.build(path='.', rm=False,
-                                                     tag=self.docker_img_url,
-                                                     timeout=None):
+                                                     tag=self.docker_img_url):
 
                 pprint_docker(line)
 

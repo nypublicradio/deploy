@@ -1,0 +1,65 @@
+#!/usr/bin/env python3
+""" NYPR Lambda Deployment Tool.
+
+Usage:
+  lambda_deploy build [--build-tag=<tag>]
+  lambda_deploy deploy --env=<env> [--build-tag=<tag>]
+
+Options:
+  -h --help                     Show this screen.
+  --version                     Show version.
+  --build-tag=<tag>             Manually specify a build tag.
+
+  # deploy
+  --env=<env>                   Environment (eg. dev|demo|prod|util)
+"""
+import boto3
+from docopt import docopt
+
+
+if __name__ == '__main__':
+    args = docopt(__doc__)
+    args = enforce_types(args)
+
+    # supports passing --build-tag manually
+    # or via environment variable (CircleCI default behavior)
+    if args['--build-tag']:
+        ecs_deploy = ECSDeploy(build_tag=args['--build-tag'])
+    else:
+        ecs_deploy = ECSDeploy()
+
+    if args['build']:
+        ecs_deploy.build_docker_img(
+            no_use_cache=args['--no-use-cache'],
+            with_circle_hack=args['--with-circle-hack']
+        )
+
+    elif args['test']:
+        ecs_deploy.test_docker_img(test_command=args['--test-cmd'])
+
+    elif args['deploy']:
+        ecs_deploy.deploy(
+            env=args['--env'],
+            no_service=args['--no-service'],
+            memory_reservation=args['--memory-reservation'],
+            memory_reservation_hard=args['--memory-reservation-hard'],
+            cpu=args['--cpu'],
+            ports=args['--port'],
+            timeout=args['--timeout'],
+            cmd=args['--cmd'],
+            role=args['--role']
+        )
+
+    elif args['cleanup']:
+        ecs_deploy.deregister_task_defs(
+            env=args['--env'],
+            revisions_to_keep=args['--revisions-to-keep'],
+            role=args['--role']
+        )
+
+    elif args['push']:
+        ecs_deploy.push_ecr_image()
+    elif args['secrets']:
+        ecs_deploy.backup_secrets(
+            s3_bucket=args['--s3-bucket']
+        )
